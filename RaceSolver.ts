@@ -313,8 +313,12 @@ export class RaceSolver {
 			specialSkillDurationScaling: 1.0
 		};
 
+        this.downhills = {
+            enter: this.getNewTimer(0.0),
+            exit: this.getNewTimer(0.0)
+        }
+
 		this.initHills();
-        this.resetDownhills();
 
 		// must come before the first round of skill activations so concen etc can modify it
 		this.startDelay = 0.1 * this.rng.random();
@@ -368,10 +372,8 @@ export class RaceSolver {
 	}
 
     resetDownhills() {
-        this.downhills = {
-            enter: this.getNewTimer(0.0),
-            exit: this.getNewTimer(0.0)
-        }
+        this.downhills.enter.t = 0.0;
+        this.downhills.exit.t = 0.0;
         this.isDownhillBoost = false;
     }
 
