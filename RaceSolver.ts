@@ -504,10 +504,10 @@ export class RaceSolver {
         const target = this.rng.uniform(10000) / 100;
 
 		if (this.hillIdx != -1) {
-            const slope = this.course.slopes[this.hillIdx].slope;
+            const slope = this.course.slopes[this.hillIdx].slope / 10000.0;
             if (slope > 0) {
                 // recalculating this every frame is actually measurably faster than calculating the penalty for each slope ahead of time, somehow
-                this.targetSpeed -= this.course.slopes[this.hillIdx].slope / 10000.0 * 200.0 / this.horse.power;
+                this.targetSpeed -= slope * 200.0 / this.horse.power;
                 this.targetSpeed = Math.max(this.targetSpeed, this.minSpeed);
             } else {
                 if (this.isDownhillBoost) {
@@ -535,7 +535,7 @@ export class RaceSolver {
                 }
 
                 if (this.isDownhillBoost) {
-                    this.targetSpeed += 0.3 + (this.course.slopes[this.hillIdx].slope / 100000.0);
+                    this.targetSpeed += 0.3 + (slope / 10.0);
                 }
             }
 		}
