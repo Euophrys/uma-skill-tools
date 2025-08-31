@@ -245,9 +245,7 @@ export class RaceSolver {
 
     downhills: {
         enter: Timer,
-        exit: Timer,
-        enterAttempts: number,
-        exitAttempts: number
+        exit: Timer
     }
 
 	constructor(params: {
@@ -372,9 +370,7 @@ export class RaceSolver {
     resetDownhills() {
         this.downhills = {
             enter: this.getNewTimer(0.0),
-            exit: this.getNewTimer(0.0),
-            enterAttempts: 0,
-            exitAttempts: 0
+            exit: this.getNewTimer(0.0)
         }
         this.isDownhillBoost = false;
     }
@@ -515,7 +511,6 @@ export class RaceSolver {
                 if (this.isDownhillBoost) {
                     if (this.downhills.exit.t > 1) {
                         this.downhills.exit.t -= 1;
-                        this.downhills.exitAttempts += 1;
 
                         const chance = 20;
                         console.log(`testing ${chance} against ${target} to exit boost`);
@@ -526,7 +521,6 @@ export class RaceSolver {
                 } else {
                     if (this.downhills.enter.t > 1) {
                         this.downhills.enter.t -= 1;
-                        this.downhills.enterAttempts += 1;
 
                         const chance = this.horse.wisdom * 0.04;
                         console.log(`testing ${chance} against ${target} to enter boost`);
