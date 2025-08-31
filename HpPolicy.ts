@@ -56,25 +56,44 @@ export class GameHpPolicy {
 		this.subparAcceptChance = Math.round((15.0 + 0.05 * horse.wisdom) * 1000);
 	}
 
-	getStatusModifier(state: {isPaceDown: boolean}) {
+	getStatusModifier(state: RaceState) {
 		let modifier = 1.0;
 		if (state.isPaceDown) {
 			modifier *= 0.6;
 		}
-		// TODO downhill mode
+		if (state.isDownhillBoost) {
+            modifier *= 0.4;
+        }
 		return modifier;
 	}
 
-	hpPerSecond(state: {phase: Phase, isPaceDown: boolean}, velocity: number) {
+    savedFromDownhill = 0;
+
+	hpPerSecond(state: RaceState, velocity: number, dt:number = 1) {
 		const gutsModifier = state.phase >= 2 ? this.gutsModifier : 1.0;
-		return 20.0 * Math.pow(velocity - this.baseSpeed + 12.0, 2) / 144.0 *
+		const int = 20.0 * Math.pow(velocity - this.baseSpeed + 12.0, 2) / 144.0 *
 			this.getStatusModifier(state) * this.groundModifier * gutsModifier;
+        if (state.isDownhillBoost) {
+            this.savedFromDownhill += int * 0.6 * dt;
+        }
+        return int * this.getStatusModifier(state);
 	}
+
+    downhill = 0;
+    nondownhill = 0;
 
 	tick(state: RaceState, dt: number) {
 		// NOTE unsure whether hp is consumed by `amount*dt` per frame or `amount` once every second
 		// i think it is actually the latter
-		this.hp -= this.hpPerSecond(state, state.currentSpeed) * dt;
+		this.hp -= this.hpPerSecond(state, state.currentSpeed, dt) * dt;
+
+        if (state.isDownhillBoost) {
+            this.downhill += dt;
+        } else {
+            this.nondownhill += dt;
+        }
+
+        console.log(`${this.downhill}/${this.nondownhill + this.downhill} || ${this.savedFromDownhill}`);
 	}
 
 	hasRemainingHp() {
@@ -92,7 +111,7 @@ export class GameHpPolicy {
 	getLastSpurtPair(state: RaceState, maxSpeed: number, baseTargetSpeed2: number) {
 		const maxDist = this.distance - CourseHelpers.phaseStart(this.distance, 2);
 		const s = (maxDist - 60) / maxSpeed;
-		const lastleg = {phase: 2 as Phase, isPaceDown: false};
+		const lastleg = {phase: 2 as Phase, isPaceDown: false} as RaceState;
 		if (this.hp >= this.hpPerSecond(lastleg, maxSpeed) * s) {
 			return [-1, maxSpeed] as [number, number];
 		}

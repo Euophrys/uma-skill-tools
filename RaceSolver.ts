@@ -121,6 +121,7 @@ export interface RaceState {
 	readonly lastSpurtSpeed: number
 	readonly lastSpurtTransition: number
 	readonly isPaceDown: boolean
+    readonly isDownhillBoost: boolean
 	readonly phase: Phase
 	readonly pos: number
 	readonly hp: Readonly<HpPolicy>
@@ -205,6 +206,7 @@ export class RaceSolver {
 	gateRoll: number
 	randomLot: number
 	isLastSpurt: boolean
+    isDownhillBoost: boolean
 	phase: Phase
 	nextPhaseTransition: number
 	activeTargetSpeedSkills: ActiveSkill[]
@@ -240,6 +242,13 @@ export class RaceSolver {
 		oneFrameAccel: number
 		specialSkillDurationScaling: number
 	}
+
+    downhills: {
+        enter: Timer,
+        exit: Timer,
+        enterAttempts: number,
+        exitAttempts: number
+    }
 
 	constructor(params: {
 		horse: HorseParameters,
@@ -307,6 +316,7 @@ export class RaceSolver {
 		};
 
 		this.initHills();
+        this.resetDownhills();
 
 		// must come before the first round of skill activations so concen etc can modify it
 		this.startDelay = 0.1 * this.rng.random();
@@ -354,14 +364,20 @@ export class RaceSolver {
 		this.hillEnd = this.course.slopes.map(s => s.start + s.length).reverse();
 		this.hillIdx = -1;
 		if (this.hillStart.length > 0 && this.hillStart[this.hillStart.length - 1] == 0) {
-			if (this.course.slopes[0].slope > 0) {
-				this.hillIdx = 0;
-			} else {
-				this.hillEnd.pop();
-			}
+			this.hillIdx = 0;
 			this.hillStart.pop();
 		}
 	}
+
+    resetDownhills() {
+        this.downhills = {
+            enter: this.getNewTimer(0.0),
+            exit: this.getNewTimer(0.0),
+            enterAttempts: 0,
+            exitAttempts: 0
+        }
+        this.isDownhillBoost = false;
+    }
 
 	getNewTimer(t: number = 0) {
 		const tm = new Timer(t);
@@ -486,10 +502,46 @@ export class RaceSolver {
 		this.targetSpeed += this.sectionModifier[Math.floor(this.pos / this.sectionLength)];
 		this.targetSpeed += this.modifiers.targetSpeed.acc + this.modifiers.targetSpeed.err;
 
+        // I imagine if we do this every frame it will keep the umas in sync? maybe??
+        const target = this.rng.uniform(10000) / 100;
+
 		if (this.hillIdx != -1) {
-			// recalculating this every frame is actually measurably faster than calculating the penalty for each slope ahead of time, somehow
-			this.targetSpeed -= this.course.slopes[this.hillIdx].slope / 10000.0 * 200.0 / this.horse.power;
-			this.targetSpeed = Math.max(this.targetSpeed, this.minSpeed);
+            const slope = this.course.slopes[this.hillIdx].slope;
+            if (slope > 0) {
+                // recalculating this every frame is actually measurably faster than calculating the penalty for each slope ahead of time, somehow
+                this.targetSpeed -= this.course.slopes[this.hillIdx].slope / 10000.0 * 200.0 / this.horse.power;
+                this.targetSpeed = Math.max(this.targetSpeed, this.minSpeed);
+            } else {
+                if (this.isDownhillBoost) {
+                    if (this.downhills.exit.t > 1) {
+                        this.downhills.exit.t -= 1;
+                        this.downhills.exitAttempts += 1;
+
+                        const chance = 20;
+                        console.log(`testing ${chance} against ${target} to exit boost`);
+                        if (target <= chance) {
+                            this.resetDownhills();
+                        }
+                    }
+                } else {
+                    if (this.downhills.enter.t > 1) {
+                        this.downhills.enter.t -= 1;
+                        this.downhills.enterAttempts += 1;
+
+                        const chance = this.horse.wisdom * 0.04;
+                        console.log(`testing ${chance} against ${target} to enter boost`);
+
+                        if (target <= chance) {
+                            this.resetDownhills();
+                            this.isDownhillBoost = true;
+                        }
+                    }
+                }
+
+                if (this.isDownhillBoost) {
+                    this.targetSpeed += 0.3 + (this.course.slopes[this.hillIdx].slope / 100000.0);
+                }
+            }
 		}
 	}
 
@@ -508,15 +560,14 @@ export class RaceSolver {
 
 	updateHills() {
 		if (this.hillIdx == -1 && this.hillStart.length > 0 && this.pos >= this.hillStart[this.hillStart.length - 1]) {
-			if (this.course.slopes[this.nHills - this.hillStart.length].slope > 0) {
-				this.hillIdx = this.nHills - this.hillStart.length;
-			} else {
-				this.hillEnd.pop();
-			}
+            this.hillIdx = this.nHills - this.hillStart.length;
+            this.hillEnd.pop();
 			this.hillStart.pop();
+            this.resetDownhills();
 		} else if (this.hillIdx != -1 && this.hillEnd.length > 0 && this.pos > this.hillEnd[this.hillEnd.length - 1]) {
 			this.hillIdx = -1;
 			this.hillEnd.pop();
+            this.resetDownhills();
 		}
 	}
 
