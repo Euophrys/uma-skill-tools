@@ -502,6 +502,7 @@ export class RaceSolver {
 
 		if (this.hillIdx != -1) {
             const slope = this.course.slopes[this.hillIdx].slope / 10000.0;
+            
             if (slope > 0) {
                 // recalculating this every frame is actually measurably faster than calculating the penalty for each slope ahead of time, somehow
                 this.targetSpeed -= slope * 200.0 / this.horse.power;
@@ -535,7 +536,7 @@ export class RaceSolver {
                 }
 
                 if (this.isDownhillBoost) {
-                    this.targetSpeed += 0.3 + (slope / 10.0);
+                    this.targetSpeed += 0.3 + Math.abs(slope / 10.0);
                 }
             }
 		}
