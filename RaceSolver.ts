@@ -314,7 +314,7 @@ export class RaceSolver {
 		};
 
         this.downhills = {
-            enter: this.getNewTimer(0.0),
+            enter: this.getNewTimer(1.0),
             exit: this.getNewTimer(0.0)
         }
 
@@ -372,7 +372,7 @@ export class RaceSolver {
 	}
 
     resetDownhills() {
-        this.downhills.enter.t = 0.0;
+        this.downhills.enter.t = 1.0;
         this.downhills.exit.t = 0.0;
         this.isDownhillBoost = false;
     }
@@ -500,9 +500,6 @@ export class RaceSolver {
 		this.targetSpeed += this.sectionModifier[Math.floor(this.pos / this.sectionLength)];
 		this.targetSpeed += this.modifiers.targetSpeed.acc + this.modifiers.targetSpeed.err;
 
-        // I imagine if we do this every frame it will keep the umas in sync? maybe??
-        const target = this.rng.uniform(10000) / 100;
-
 		if (this.hillIdx != -1) {
             const slope = this.course.slopes[this.hillIdx].slope / 10000.0;
             if (slope > 0) {
@@ -510,6 +507,9 @@ export class RaceSolver {
                 this.targetSpeed -= slope * 200.0 / this.horse.power;
                 this.targetSpeed = Math.max(this.targetSpeed, this.minSpeed);
             } else {
+                // I imagine if we do this every frame it will keep the umas in sync? maybe??
+                const target = this.rng.uniform(10000) / 100;
+
                 if (this.isDownhillBoost) {
                     if (this.downhills.exit.t > 1) {
                         this.downhills.exit.t -= 1;
