@@ -71,8 +71,7 @@ export class GameHpPolicy {
 
 	hpPerSecond(state: RaceState, velocity: number, dt:number = 1) {
 		const gutsModifier = state.phase >= 2 ? this.gutsModifier : 1.0;
-		const int = 20.0 * Math.pow(velocity - this.baseSpeed + 12.0, 2) / 144.0 *
-			this.getStatusModifier(state) * this.groundModifier * gutsModifier;
+		const int = 20.0 * Math.pow(velocity - this.baseSpeed + 12.0, 2) / 144.0 * this.groundModifier * gutsModifier;
         if (state.isDownhillBoost) {
             this.savedFromDownhill += int * 0.6 * dt;
         }
